@@ -85,7 +85,6 @@
 
 
 // export {clerkWebhooks }
-
 import { Webhook } from 'svix';
 import userModel from '../model/userModel.js';
 
@@ -93,7 +92,7 @@ const clerkWebhooks = async (req, res) => {
     try {
         console.log("🔔 Clerk webhook triggered");
 
-        const payload = req.body.toString(); // ✅ raw JSON string from express.raw()
+        const payload = req.body.toString(); // Raw body as string for Svix
         const headers = {
             "svix-id": req.headers["svix-id"],
             "svix-timestamp": req.headers["svix-timestamp"],
@@ -101,49 +100,74 @@ const clerkWebhooks = async (req, res) => {
         };
 
         const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
-        const evt = await wh.verify(payload, headers); // ✅ will throw if invalid
+        const evt = await wh.verify(payload, headers); // Throws if invalid
 
         const { data, type } = evt;
+
+        console.log("📨 Webhook event type:", type);
+        console.log("🧾 Webhook data received:", data);
 
         switch (type) {
             case "user.created": {
                 const userData = {
                     clerkId: data.id,
-                    email: data.email_addresses[0].email_address,
-                    firstName: data.first_name,
-                    lastName: data.last_name,
-                    photo: data.image_url
+                    email: data.email_addresses?.[0]?.email_address || '',
+                    firstName: data.first_name || '',
+                    lastName: data.last_name || '',
+                    photo: data.image_url || '',
                 };
-                await userModel.create(userData);
-                console.log("✅ user.created saved");
+
+                console.log("📦 Creating user:", userData);
+
+                try {
+                    await userModel.create(userData);
+                    console.log("✅ User created and saved to DB");
+                } catch (dbErr) {
+                    console.error("❌ DB Error while creating user:", dbErr.message);
+                }
+
                 break;
             }
 
             case "user.updated": {
                 const userData = {
                     email: data.email_addresses?.[0]?.email_address || '',
-                    firstName: data.first_name,
-                    lastName: data.last_name,
-                    photo: data.image_url
+                    firstName: data.first_name || '',
+                    lastName: data.last_name || '',
+                    photo: data.image_url || '',
                 };
-                await userModel.findOneAndUpdate({ clerkId: data.id }, userData);
-                console.log("🔄 user.updated handled");
+
+                try {
+                    await userModel.findOneAndUpdate({ clerkId: data.id }, userData);
+                    console.log("🔄 User updated in DB");
+                } catch (dbErr) {
+                    console.error("❌ DB Error while updating user:", dbErr.message);
+                }
+
                 break;
             }
 
             case "user.deleted": {
-                await userModel.findOneAndDelete({ clerkId: data.id });
-                console.log("❌ user.deleted removed");
+                try {
+                    await userModel.findOneAndDelete({ clerkId: data.id });
+                    console.log("❌ User deleted from DB");
+                } catch (dbErr) {
+                    console.error("❌ DB Error while deleting user:", dbErr.message);
+                }
+
                 break;
             }
+
+            default:
+                console.log("⚠️ Unhandled webhook type:", type);
         }
 
         res.status(200).json({ success: true });
-
     } catch (err) {
-        console.error("⚠️ Webhook error:", err.message);
+        console.error("⚠️ Webhook verification or logic error:", err.message);
         res.status(400).json({ success: false, message: err.message });
     }
 };
 
 export { clerkWebhooks };
+
