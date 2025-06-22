@@ -106,7 +106,6 @@ const clerkWebhooks = async (req, res) => {
         const { data, type } = evt;
 
         switch (type) {
-            
             case "user.created": {
                 const userData = {
                     clerkId: data.id,
