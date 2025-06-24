@@ -1,8 +1,76 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import { plans } from '../assets/assets'
 import { assets } from '../assets/assets'
+import { AppContext } from '../context/AppContext'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@clerk/clerk-react'
+import { toast } from 'react-toastify'
+import axios from 'axios'
 
 const BuyCredit = () => {
+  const { backendUrl, loadCreditData } = useContext(AppContext)
+  const navigate = useNavigate()
+  const { getToken } = useAuth()
+
+  // function to initalise razorpay payment
+  const initpay = async (order) => {
+    const options = {
+    key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+    amount: order.amount,
+    currency: order.currency,
+    name: 'Credits Payment',
+    description: "Credits Payment",
+    order_id: order.id,
+    receipt: order.receipt,
+    handler: async (response) => { //response from razpy after payment
+        console.log(response);
+
+        const token = await getToken()
+
+        try {  //verifying payment
+
+          const { data} = await axios.post(backendUrl + '/api/user/verify-razor', response,{headers:{token}})
+
+          if(data.success){
+            loadCreditData()
+            navigate('/')
+            toast.success('Credits Added')
+          }
+          
+        } catch (error) {
+          console.log(error);
+          toast.error(error.message)
+        }
+    }
+}
+    //  using this option we will create razpy payment gateway
+    const rzp = new window.Razorpay(options)
+    rzp.open()   //open new window for paymt
+
+
+  }
+
+  // handler for API call to initialise payment
+  const paymentRazorpay = async (planId) => {
+    try {
+
+      const token = await getToken()
+      const {data} = await axios.post(backendUrl + '/api/user/pay-razor',{planId},{headers:{token}})
+
+      if(data.success){ // if the call is successful then we will receive the razorpay order details in response
+        initpay(data.order)
+      }
+
+
+
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message)
+      
+    }
+    
+  }
+
   return (
     <div className='min-h-[80vh] text-center pt-14 mb-10'>
       <button className='border border-gray-400 px-10 py-2 rounded-full mb-6 hover:scale-105 transition-all duration-300'>Our Plans</button>
@@ -17,7 +85,9 @@ const BuyCredit = () => {
             <p className='text-xl font-semibold mb-4'>
               <span>${item.price}</span> / {item.credits} credits
             </p>
-            <button className="text-white px-6 py-2 rounded-full bg-gradient-to-br from-black to-blue-600 hover:from-blue-600 hover:to-black 
+
+            {/* in item.id we will get the plan id */}
+            <button onClick={()=> paymentRazorpay(item.id)} className="text-white px-6 py-2 rounded-full bg-gradient-to-br from-black to-blue-600 hover:from-blue-600 hover:to-black 
              transition-all duration-500 ease-in-out transform hover:scale-105">
               Purchase
             </button>
