@@ -35,15 +35,15 @@ export const assets = {
 export const testimonialsData = [
     {
         id: 1,
-        text: "I've been using AI-BgR.remover for nearly two years, primarily for Instagram, and it has been incredibly user-friendly, making my work easier.",
-        author: "Richard Nelson",
+        text: "I've been using Remver.Ai for nearly two years, primarily for Instagram, and it has been incredibly user-friendly, making my work easier.",
+        author: "Avinash Sharma",
         image: profile_img_1,
         jobTitle:'Web Developer'
     },
     {
         id: 2,
-        text: "I've been using AI-BgR.remover for nearly 6 months, I had a fantastic experience. The quality is top-notch. I recommend others to try this app.",
-        author: "Donald Jackman",
+        text: "I've been using Remver.Ai for nearly 6 months, I had a fantastic experience. The quality is top-notch. I recommend others to try this app.",
+        author: "Trimurti Trump",
         image: profile_img_2,
         jobTitle:'UI Deginer'
     },
